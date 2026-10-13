@@ -1,0 +1,12 @@
+@Platform.Api_HostAddress = http://localhost:5138
+
+POST {{Platform.Api_HostAddress}}/api/chat
+Content-Type: application/json
+
+{
+  "messages": [
+    { "role": "user", "text": "Does Victory Skating have an online Double Axel training program?" }
+  ]
+}
+
+###
