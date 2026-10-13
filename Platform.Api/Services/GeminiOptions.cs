@@ -7,7 +7,10 @@ public class GeminiOptions
     /// <summary>Key from https://aistudio.google.com/apikey. Do not store it in appsettings.json; use user-secrets.</summary>
     public string ApiKey { get; set; } = "";
 
-    public string Model { get; set; } = "gemini-2.5-flash";
+    public string Model { get; set; } = "gemini-3.5-flash";
+
+    /// <summary>Models tried in order when the primary one is overloaded, rate-limited or retired.</summary>
+    public string[] FallbackModels { get; set; } = [];
 
     public string BaseUrl { get; set; } = "https://generativelanguage.googleapis.com/v1beta/";
 
