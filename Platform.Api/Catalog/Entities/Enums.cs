@@ -8,6 +8,8 @@ public enum SourcePlatform
     WordPress,
     Mindbody,
     Fresha,
+    /// <summary>Website built on Tilda (no product API; data is read from page HTML).</summary>
+    Tilda,
     Custom
 }
 
