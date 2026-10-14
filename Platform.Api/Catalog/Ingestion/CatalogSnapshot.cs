@@ -6,10 +6,12 @@ namespace Platform.Api.Catalog.Ingestion;
 // Each record carries an ExternalId: a stable key in the source platform used to match
 // existing rows on re-import (Shopify product id, Tilda page id, canonical URL, etc.).
 
+/// <param name="Warnings">Data quality issues found by the adapter (ambiguities, values dropped by validation).</param>
 public sealed record CatalogSnapshot(
     BusinessSnapshot Business,
     IReadOnlyList<StaffSnapshot> Staff,
-    IReadOnlyList<OfferingSnapshot> Offerings);
+    IReadOnlyList<OfferingSnapshot> Offerings,
+    IReadOnlyList<string> Warnings);
 
 public sealed record BusinessSnapshot
 {

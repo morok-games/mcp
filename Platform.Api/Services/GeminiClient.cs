@@ -1,6 +1,10 @@
+using System.ComponentModel;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Options;
 using Platform.Api.Models;
 
@@ -13,11 +17,8 @@ public class GeminiClient(HttpClient http, IOptions<GeminiOptions> options, ILog
 {
     private readonly GeminiOptions _options = options.Value;
 
-    public async Task<string> GenerateAsync(IReadOnlyList<ChatMessage> history, CancellationToken ct = default)
+    public Task<string> GenerateAsync(IReadOnlyList<ChatMessage> history, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(_options.ApiKey))
-            throw new InvalidOperationException("Gemini:ApiKey is not configured.");
-
         var request = new GeminiRequest(
             Contents: history
                 .Select(m => new GeminiContent(
@@ -26,6 +27,48 @@ public class GeminiClient(HttpClient http, IOptions<GeminiOptions> options, ILog
                     Parts: [new GeminiPart(m.Text)]))
                 .ToList(),
             SystemInstruction: new GeminiContent(null, [new GeminiPart(_options.SystemPrompt)]));
+
+        return GenerateCoreAsync(request, ct);
+    }
+
+    public async Task<T> GenerateStructuredAsync<T>(string systemPrompt, string userPrompt, CancellationToken ct = default)
+    {
+        var schema = JsonSchemaExporter.GetJsonSchemaAsNode(StructuredJsonOptions, typeof(T),
+            new JsonSchemaExporterOptions
+            {
+                TreatNullObliviousAsNonNullable = true,
+                // [Description] attributes become schema descriptions: they act as per-field instructions for the model
+                TransformSchemaNode = (context, node) =>
+                {
+                    var provider = context.PropertyInfo?.AttributeProvider ?? context.TypeInfo.Type;
+                    var description = provider.GetCustomAttributes(typeof(DescriptionAttribute), inherit: true)
+                        .OfType<DescriptionAttribute>().FirstOrDefault()?.Description;
+
+                    if (description is not null && node is JsonObject obj)
+                        obj["description"] = description;
+
+                    return node;
+                }
+            });
+
+        var request = new GeminiRequest(
+            Contents: [new GeminiContent("user", [new GeminiPart(userPrompt)])],
+            SystemInstruction: new GeminiContent(null, [new GeminiPart(systemPrompt)]),
+            GenerationConfig: new GeminiGenerationConfig(
+                ResponseMimeType: "application/json",
+                ResponseJsonSchema: schema,
+                Temperature: 0));
+
+        var json = await GenerateCoreAsync(request, ct);
+
+        return JsonSerializer.Deserialize<T>(json, StructuredJsonOptions)
+               ?? throw new InvalidOperationException("Gemini returned an empty structured response.");
+    }
+
+    private async Task<string> GenerateCoreAsync(GeminiRequest request, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(_options.ApiKey))
+            throw new InvalidOperationException("Gemini:ApiKey is not configured.");
 
         // The free tier is frequently overloaded per model (503/429/500), and old models get
         // retired (404), so try the primary model first and then fall back to the others.
@@ -38,6 +81,9 @@ public class GeminiClient(HttpClient http, IOptions<GeminiOptions> options, ILog
 
             if (status == HttpStatusCode.OK)
             {
+                if (errors.Count > 0)
+                    logger.LogInformation("Gemini fallback model {Model} answered after: {Errors}", model, string.Join(", ", errors));
+
                 var result = JsonSerializer.Deserialize<GeminiResponse>(body, JsonOptions);
                 var text = string.Concat(result?.Candidates?.FirstOrDefault()?.Content?.Parts?.Select(p => p.Text) ?? []);
                 return string.IsNullOrWhiteSpace(text) ? "(empty response)" : text;
@@ -88,7 +134,18 @@ public class GeminiClient(HttpClient http, IOptions<GeminiOptions> options, ILog
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private record GeminiRequest(List<GeminiContent> Contents, GeminiContent? SystemInstruction);
+    /// <summary>Options shared by schema generation and deserialization so enum names and casing match.</summary>
+    private static readonly JsonSerializerOptions StructuredJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver()
+    };
+
+    private record GeminiRequest(
+        List<GeminiContent> Contents,
+        GeminiContent? SystemInstruction,
+        GeminiGenerationConfig? GenerationConfig = null);
+    private record GeminiGenerationConfig(string? ResponseMimeType, JsonNode? ResponseJsonSchema, double? Temperature);
     private record GeminiContent(string? Role, List<GeminiPart>? Parts);
     private record GeminiPart(string? Text);
     private record GeminiResponse(List<GeminiCandidate>? Candidates);

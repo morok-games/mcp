@@ -10,3 +10,25 @@ Content-Type: application/json
 }
 
 ###
+
+### Catalog import preview (dry run: nothing is saved)
+POST {{Platform.Api_HostAddress}}/api/catalog/import?dryRun=true
+Content-Type: application/json
+
+{
+  "platform": "Tilda",
+  "businessSlug": "victory-skating",
+  "url": "https://victoryskating.com/doubleaxel"
+}
+
+### Catalog import (saves to the database)
+POST {{Platform.Api_HostAddress}}/api/catalog/import
+Content-Type: application/json
+
+{
+  "platform": "Tilda",
+  "businessSlug": "victory-skating",
+  "url": "https://victoryskating.com/doubleaxel"
+}
+
+###

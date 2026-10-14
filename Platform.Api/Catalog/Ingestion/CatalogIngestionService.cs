@@ -6,16 +6,27 @@ public class CatalogIngestionService(
     CatalogImporter importer,
     ILogger<CatalogIngestionService> logger)
 {
-    public async Task<CatalogImportResult> IngestAsync(CatalogSource source, CancellationToken ct = default)
+    /// <summary>Reads and normalizes the source without saving: used for review (dry run).</summary>
+    public async Task<CatalogSnapshot> FetchAsync(CatalogSource source, CancellationToken ct = default)
     {
         var adapter = resolver.Resolve(source.Platform);
 
         logger.LogInformation("Fetching catalog for {Business} from {Platform}", source.BusinessSlug, source.Platform);
         var snapshot = await adapter.FetchAsync(source, ct);
 
+        foreach (var warning in snapshot.Warnings)
+            logger.LogWarning("Catalog {Business}: {Warning}", source.BusinessSlug, warning);
+
+        return snapshot;
+    }
+
+    public async Task<(CatalogSnapshot Snapshot, CatalogImportResult Result)> IngestAsync(CatalogSource source, CancellationToken ct = default)
+    {
+        var snapshot = await FetchAsync(source, ct);
+
         var result = await importer.ImportAsync(source, snapshot, ct);
         logger.LogInformation("Catalog import for {Business} finished: {Result}", source.BusinessSlug, result);
 
-        return result;
+        return (snapshot, result);
     }
 }
