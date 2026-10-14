@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using Platform.Api.Assistant;
 using Platform.Api.Catalog.Data;
 using Platform.Api.Catalog.Ingestion;
 using Platform.Api.Services;
@@ -15,6 +16,9 @@ builder.Services.AddDbContext<CatalogDbContext>(options => options
     .UseNpgsql(builder.Configuration.GetConnectionString("Catalog"))
     .UseSnakeCaseNamingConvention());
 builder.Services.AddCatalogIngestion();
+
+// Swap the implementation here to change how user questions are understood
+builder.Services.AddScoped<IQueryParser, LlmQueryParser>();
 
 builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection(GeminiOptions.SectionName));
 builder.Services.AddHttpClient<ILlmClient, GeminiClient>((sp, http) =>

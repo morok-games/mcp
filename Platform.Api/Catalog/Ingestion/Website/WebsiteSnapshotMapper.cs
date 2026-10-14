@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text.RegularExpressions;
 using Platform.Api.Catalog.Entities;
 
 namespace Platform.Api.Catalog.Ingestion.Website;
@@ -9,7 +8,7 @@ namespace Platform.Api.Catalog.Ingestion.Website;
 /// prices must appear in the page text, checkout URLs must be real links from the page, staff names must
 /// be mentioned on the page, time zones/dates/durations must be valid. Everything dropped becomes a warning.
 /// </summary>
-public static partial class WebsiteSnapshotMapper
+public static class WebsiteSnapshotMapper
 {
     public static CatalogSnapshot Map(WebPage page, WebsiteExtraction extraction)
     {
@@ -256,13 +255,10 @@ public static partial class WebsiteSnapshotMapper
         if (string.IsNullOrWhiteSpace(value))
             return null;
 
-        if (IsoDurationRegex().IsMatch(value))
+        if (IsoDuration.IsValid(value))
             return value;
 
         warnings.Add($"{scope}: '{value}' is not an ISO 8601 duration.");
         return null;
     }
-
-    [GeneratedRegex(@"^P(?!$)(\d+Y)?(\d+M)?(\d+W)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+S)?)?$")]
-    private static partial Regex IsoDurationRegex();
 }

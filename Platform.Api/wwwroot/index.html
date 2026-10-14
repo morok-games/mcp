@@ -49,10 +49,23 @@
             return div;
         }
 
-        async function send(text) {
-            messages.push({ role: 'user', text });
-            render('user', text);
+        let failed = null; // { userBubble, errorBubble } of the last unanswered message
 
+        function send(text) {
+            // A new message replaces a failed one instead of leaving it unanswered in history
+            if (failed) {
+                messages.pop();
+                failed.userBubble.remove();
+                failed.errorBubble.remove();
+                failed = null;
+            }
+
+            messages.push({ role: 'user', text });
+            const userBubble = render('user', text);
+            requestReply(userBubble);
+        }
+
+        async function requestReply(userBubble) {
             const pending = render('assistant', 'Thinking…', 'text-secondary');
             sendBtn.disabled = true;
 
@@ -71,13 +84,34 @@
                 pending.classList.remove('text-secondary');
                 pending.textContent = data.reply;
             } catch (e) {
-                messages.pop(); // drop the unanswered user message from history
-                pending.classList.replace('text-secondary', 'text-danger');
-                pending.textContent = 'Error: ' + e.message;
+                showError(pending, e.message, userBubble);
             } finally {
                 sendBtn.disabled = false;
                 input.focus();
             }
+        }
+
+        function showError(bubble, message, userBubble) {
+            bubble.className = 'msg align-self-start border border-danger-subtle bg-danger-subtle rounded-3 px-3 py-2';
+            bubble.textContent = '';
+
+            const text = document.createElement('div');
+            text.className = 'text-danger-emphasis mb-2';
+            text.textContent = 'Error: ' + message;
+
+            const retry = document.createElement('button');
+            retry.type = 'button';
+            retry.className = 'btn btn-sm btn-outline-danger';
+            retry.textContent = 'Retry';
+            retry.addEventListener('click', () => {
+                if (sendBtn.disabled) return;
+                failed = null;
+                bubble.remove();
+                requestReply(userBubble); // the user message is still the last one in history
+            });
+
+            bubble.append(text, retry);
+            failed = { userBubble, errorBubble: bubble };
         }
 
         form.addEventListener('submit', e => {
@@ -98,6 +132,7 @@
 
         document.getElementById('clearBtn').addEventListener('click', () => {
             messages.length = 0;
+            failed = null;
             list.innerHTML = '';
             input.focus();
         });
