@@ -12,6 +12,9 @@ public class GeminiOptions
     /// <summary>Models tried in order when the primary one is overloaded, rate-limited or retired.</summary>
     public string[] FallbackModels { get; set; } = [];
 
+    /// <summary>How long a failed model is skipped before it is tried again.</summary>
+    public int CircuitBreakSeconds { get; set; } = 300;
+
     public string BaseUrl { get; set; } = "https://generativelanguage.googleapis.com/v1beta/";
 
     public string SystemPrompt { get; set; } = "You are a helpful assistant.";

@@ -13,7 +13,11 @@ namespace Platform.Api.Services;
 /// <summary>
 /// Minimal Gemini REST API client (models/{model}:generateContent) without external SDKs.
 /// </summary>
-public class GeminiClient(HttpClient http, IOptions<GeminiOptions> options, ILogger<GeminiClient> logger) : ILlmClient
+public class GeminiClient(
+    HttpClient http,
+    IOptions<GeminiOptions> options,
+    ModelCircuitBreaker breaker,
+    ILogger<GeminiClient> logger) : ILlmClient
 {
     private readonly GeminiOptions _options = options.Value;
 
@@ -72,15 +76,33 @@ public class GeminiClient(HttpClient http, IOptions<GeminiOptions> options, ILog
 
         // The free tier is frequently overloaded per model (503/429/500), and old models get
         // retired (404), so try the primary model first and then fall back to the others.
-        var models = new[] { _options.Model }.Concat(_options.FallbackModels).Distinct().ToList();
+        var configured = new[] { _options.Model }.Concat(_options.FallbackModels).Distinct().ToList();
+
+        // Skip models that failed recently; if all of them did, trying is still better than failing outright
+        var models = configured.Where(m => !breaker.IsOpen(m)).ToList();
+        if (models.Count == 0)
+        {
+            logger.LogWarning("All Gemini models are in circuit break, trying all of them");
+            models = configured;
+        }
+        else if (models.Count < configured.Count)
+        {
+            logger.LogInformation("Skipping Gemini models in circuit break: {Models}",
+                string.Join(", ", configured.Except(models)));
+        }
+
         var errors = new List<string>();
 
-        foreach (var model in models)
+        for (var i = 0; i < models.Count; i++)
         {
-            var (status, body) = await SendWithRetryAsync(model, request, ct);
+            var model = models[i];
+            // Retrying the same model only pays off when there is no other model to fall back to
+            var isLast = i == models.Count - 1;
+            var (status, body) = await SendWithRetryAsync(model, request, maxAttempts: isLast ? 2 : 1, ct);
 
             if (status == HttpStatusCode.OK)
             {
+                breaker.Close(model);
                 if (errors.Count > 0)
                     logger.LogInformation("Gemini fallback model {Model} answered after: {Errors}", model, string.Join(", ", errors));
 
@@ -94,6 +116,9 @@ public class GeminiClient(HttpClient http, IOptions<GeminiOptions> options, ILog
 
             if (!IsTransient(status) && status != HttpStatusCode.NotFound)
                 break; // e.g. 400/403: a request or key problem that another model will not fix
+
+            breaker.Open(model, TimeSpan.FromSeconds(_options.CircuitBreakSeconds));
+            logger.LogWarning("Gemini model {Model} is skipped for {Seconds}s", model, _options.CircuitBreakSeconds);
         }
 
         throw new HttpRequestException($"Gemini is unavailable ({string.Join(", ", errors)}). Please try again later.");
@@ -105,10 +130,9 @@ public class GeminiClient(HttpClient http, IOptions<GeminiOptions> options, ILog
     /// <summary>
     /// Sends the request to one model, retrying transient errors with a short backoff.
     /// </summary>
-    private async Task<(HttpStatusCode Status, string Body)> SendWithRetryAsync(string model, GeminiRequest request, CancellationToken ct)
+    private async Task<(HttpStatusCode Status, string Body)> SendWithRetryAsync(string model, GeminiRequest request,
+        int maxAttempts, CancellationToken ct)
     {
-        const int maxAttempts = 2;
-
         for (var attempt = 1; ; attempt++)
         {
             using var message = new HttpRequestMessage(HttpMethod.Post, $"models/{model}:generateContent")

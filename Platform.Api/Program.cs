@@ -20,6 +20,8 @@ builder.Services.AddCatalogIngestion();
 // Swap the implementation here to change how user questions are understood
 builder.Services.AddScoped<IQueryParser, LlmQueryParser>();
 
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<ModelCircuitBreaker>();
 builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection(GeminiOptions.SectionName));
 builder.Services.AddHttpClient<ILlmClient, GeminiClient>((sp, http) =>
 {
