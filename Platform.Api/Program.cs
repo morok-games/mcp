@@ -21,6 +21,8 @@ builder.Services.AddCatalogIngestion();
 // Swap implementations here to change how questions are understood and how the catalog is searched
 builder.Services.AddScoped<IQueryParser, LlmQueryParser>();
 builder.Services.AddScoped<ICatalogSearch, PostgresCatalogSearch>();
+builder.Services.AddScoped<IAnswerComposer, LlmAnswerComposer>();
+builder.Services.AddScoped<AssistantService>();
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ModelCircuitBreaker>();

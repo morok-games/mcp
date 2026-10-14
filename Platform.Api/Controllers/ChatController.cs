@@ -9,7 +9,7 @@ namespace Platform.Api.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 public class ChatController(
-    ILlmClient llm,
+    AssistantService assistant,
     IQueryParser queryParser,
     ICatalogSearch catalogSearch,
     ILogger<ChatController> logger) : ControllerBase
@@ -22,8 +22,7 @@ public class ChatController(
 
         try
         {
-            var reply = await llm.GenerateAsync(request.Messages, ct);
-            return new ChatResponse(reply);
+            return await assistant.ReplyAsync(request.Messages, ct);
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
         {

@@ -9,7 +9,14 @@
         html, body { height: 100%; }
         #history { overflow-y: auto; }
         .msg { max-width: 80%; white-space: pre-wrap; word-wrap: break-word; }
+        /* Markdown replies: HTML provides the structure, so no pre-wrap */
+        .msg.md { white-space: normal; }
+        .msg.md > :last-child { margin-bottom: 0; }
+        .msg.md ul { padding-left: 1.25rem; margin-bottom: .5rem; }
+        .msg.md p { margin-bottom: .5rem; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 </head>
 <body class="d-flex flex-column bg-body-tertiary">
     <header class="border-bottom bg-body py-2">
@@ -82,13 +89,51 @@
                 const data = await res.json();
                 messages.push({ role: 'assistant', text: data.reply });
                 pending.classList.remove('text-secondary');
-                pending.textContent = data.reply;
+                pending.classList.add('md');
+                // LLM output is untrusted: sanitize the rendered Markdown before inserting it
+                pending.innerHTML = DOMPurify.sanitize(marked.parse(data.reply));
+                pending.querySelectorAll('a').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+                renderActions(pending, data.actions || []);
             } catch (e) {
                 showError(pending, e.message, userBubble);
             } finally {
                 sendBtn.disabled = false;
                 input.focus();
             }
+        }
+
+        // Buttons built by the server from catalog data: checkout links and quick replies
+        function renderActions(bubble, actions) {
+            if (actions.length === 0) return;
+
+            const bar = document.createElement('div');
+            bar.className = 'd-flex flex-wrap gap-2 mt-2';
+
+            for (const action of actions) {
+                if (action.type === 'Checkout') {
+                    const link = document.createElement('a');
+                    link.className = 'btn btn-success btn-sm';
+                    link.href = action.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.textContent = action.label;
+                    bar.appendChild(link);
+                } else if (action.type === 'Reply') {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'btn btn-outline-primary btn-sm';
+                    button.textContent = action.label;
+                    button.addEventListener('click', () => {
+                        if (sendBtn.disabled) return;
+                        bar.remove();
+                        send(action.text);
+                    });
+                    bar.appendChild(button);
+                }
+            }
+
+            bubble.appendChild(bar);
+            history.scrollTop = history.scrollHeight;
         }
 
         function showError(bubble, message, userBubble) {

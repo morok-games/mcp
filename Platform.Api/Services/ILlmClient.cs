@@ -8,7 +8,8 @@ namespace Platform.Api.Services;
 /// </summary>
 public interface ILlmClient
 {
-    Task<string> GenerateAsync(IReadOnlyList<ChatMessage> history, CancellationToken ct = default);
+    /// <param name="systemPrompt">Instructions for this call; null uses the configured default prompt.</param>
+    Task<string> GenerateAsync(IReadOnlyList<ChatMessage> history, string? systemPrompt = null, CancellationToken ct = default);
 
     /// <summary>
     /// Generates a response constrained to the JSON schema of <typeparamref name="T"/> and deserializes it.

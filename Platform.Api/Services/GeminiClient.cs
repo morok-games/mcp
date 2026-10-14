@@ -21,7 +21,7 @@ public class GeminiClient(
 {
     private readonly GeminiOptions _options = options.Value;
 
-    public Task<string> GenerateAsync(IReadOnlyList<ChatMessage> history, CancellationToken ct = default)
+    public Task<string> GenerateAsync(IReadOnlyList<ChatMessage> history, string? systemPrompt = null, CancellationToken ct = default)
     {
         var request = new GeminiRequest(
             Contents: history
@@ -30,7 +30,7 @@ public class GeminiClient(
                     Role: m.Role == "assistant" ? "model" : "user",
                     Parts: [new GeminiPart(m.Text)]))
                 .ToList(),
-            SystemInstruction: new GeminiContent(null, [new GeminiPart(_options.SystemPrompt)]));
+            SystemInstruction: new GeminiContent(null, [new GeminiPart(systemPrompt ?? _options.SystemPrompt)]));
 
         return GenerateCoreAsync(request, ct);
     }
