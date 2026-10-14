@@ -9,6 +9,73 @@ Content-Type: application/json
   ]
 }
 
+### Query parsing debug (step 1): how the last user message is understood
+POST {{Platform.Api_HostAddress}}/api/chat/parse
+Content-Type: application/json
+
+{
+  "messages": [
+    { "role": "user", "text": "I'm looking for an online Double Axel training program under $350 for six months. Does Victory Skating have anything?" }
+  ]
+}
+
+### Query parsing debug with context: "I want to join" resolves to the offering discussed earlier
+POST {{Platform.Api_HostAddress}}/api/chat/parse
+Content-Type: application/json
+
+{
+  "messages": [
+    { "role": "user", "text": "I want to improve my Double Axel and I'm looking for an online program under $350." },
+    { "role": "assistant", "text": "Victory Skating (VSA) offers the 6-Month Double Axel Club: online off-ice training, $299 for 6 months, 48 live classes with Coach Marta." },
+    { "role": "user", "text": "I want to join." }
+  ]
+}
+
+### Search debug (steps 1 + 2): parsed question and catalog results with match reasons
+POST {{Platform.Api_HostAddress}}/api/chat/search
+Content-Type: application/json
+
+{
+  "messages": [
+    { "role": "user", "text": "I'm looking for an online Double Axel training program under $350 for six months. Does Victory Skating have anything?" }
+  ]
+}
+
+### Search debug: price too low -> filters are relaxed and reported in relaxedFilters
+POST {{Platform.Api_HostAddress}}/api/chat/search
+Content-Type: application/json
+
+{
+  "messages": [
+    { "role": "user", "text": "Is there an online Double Axel program under $200?" }
+  ]
+}
+
+### Search debug: unknown brand -> no offerings, brand listed in unknownBrands
+POST {{Platform.Api_HostAddress}}/api/chat/search
+Content-Type: application/json
+
+{
+  "messages": [
+    { "role": "user", "text": "Does Skate Canada Academy have an online Double Axel program?" }
+  ]
+}
+
+### Catalog review: offerings with status and pricing options
+GET {{Platform.Api_HostAddress}}/api/catalog/offerings
+
+### Catalog review: publish an offering (Draft -> Active) so the assistant can find it
+PUT {{Platform.Api_HostAddress}}/api/catalog/businesses/victory-skating/offerings/doubleaxel/status
+Content-Type: application/json
+
+{ "status": "Active" }
+
+### Catalog review: switch off a misread pricing option (id from GET /api/catalog/offerings)
+PUT {{Platform.Api_HostAddress}}/api/catalog/pricing-options/00000000-0000-0000-0000-000000000000/active
+Content-Type: application/json
+
+{ "isActive": false }
+
 ###
 
 ### Catalog import preview (dry run: nothing is saved)

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using NpgsqlTypes;
 using Platform.Api.Catalog.Data;
 
 #nullable disable
@@ -181,6 +182,12 @@ namespace Platform.Api.Catalog.Data.Migrations
                         .HasColumnType("character varying(300)")
                         .HasColumnName("name");
 
+                    b.Property<NpgsqlTsVector>("SearchVector")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("tsvector")
+                        .HasColumnName("search_vector")
+                        .HasComputedColumnSql("setweight(to_tsvector('english'::regconfig, coalesce(name, '')), 'A') ||\nsetweight(to_tsvector('english'::regconfig, catalog_array_to_text(aliases)), 'A') ||\nsetweight(to_tsvector('english'::regconfig, catalog_array_to_text(tags)), 'B') ||\nsetweight(to_tsvector('english'::regconfig, coalesce(category, '')), 'B') ||\nsetweight(to_tsvector('english'::regconfig, coalesce(short_description, '')), 'C') ||\nsetweight(to_tsvector('english'::regconfig, coalesce(audience_level_text, '') || ' ' || coalesce(audience_prerequisites, '')), 'C') ||\nsetweight(to_tsvector('english'::regconfig, coalesce(description, '')), 'D') ||\nsetweight(to_tsvector('english'::regconfig, catalog_array_to_text(inclusions)), 'D')", true);
+
                     b.Property<int?>("SessionCount")
                         .HasColumnType("integer")
                         .HasColumnName("session_count");
@@ -287,6 +294,11 @@ namespace Platform.Api.Catalog.Data.Migrations
                         .HasDatabaseName("ix_offerings_aliases");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Aliases"), "gin");
+
+                    b.HasIndex("SearchVector")
+                        .HasDatabaseName("ix_offerings_search_vector");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SearchVector"), "gin");
 
                     b.HasIndex("Tags")
                         .HasDatabaseName("ix_offerings_tags");

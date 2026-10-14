@@ -125,10 +125,12 @@ public class GeminiClient(
     }
 
     private static bool IsTransient(HttpStatusCode status) =>
-        status is HttpStatusCode.ServiceUnavailable or HttpStatusCode.TooManyRequests or HttpStatusCode.InternalServerError;
+        status is HttpStatusCode.ServiceUnavailable or HttpStatusCode.TooManyRequests
+            or HttpStatusCode.InternalServerError or HttpStatusCode.RequestTimeout;
 
     /// <summary>
     /// Sends the request to one model, retrying transient errors with a short backoff.
+    /// A hung model is reported as 408 so it falls back and trips the circuit breaker like an overloaded one.
     /// </summary>
     private async Task<(HttpStatusCode Status, string Body)> SendWithRetryAsync(string model, GeminiRequest request,
         int maxAttempts, CancellationToken ct)
@@ -141,14 +143,28 @@ public class GeminiClient(
             };
             message.Headers.Add("x-goog-api-key", _options.ApiKey);
 
-            using var response = await http.SendAsync(message, ct);
-            var body = await response.Content.ReadAsStringAsync(ct);
+            using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            attemptCts.CancelAfter(TimeSpan.FromSeconds(_options.RequestTimeoutSeconds));
 
-            if (!IsTransient(response.StatusCode) || attempt == maxAttempts)
-                return (response.StatusCode, body);
+            HttpStatusCode status;
+            string body;
+            try
+            {
+                using var response = await http.SendAsync(message, attemptCts.Token);
+                status = response.StatusCode;
+                body = await response.Content.ReadAsStringAsync(attemptCts.Token);
+            }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                status = HttpStatusCode.RequestTimeout;
+                body = $"No response within {_options.RequestTimeoutSeconds}s";
+            }
+
+            if (!IsTransient(status) || attempt == maxAttempts)
+                return (status, body);
 
             logger.LogWarning("Gemini model {Model} returned {Status}, retrying (attempt {Attempt}/{Max})",
-                model, (int)response.StatusCode, attempt, maxAttempts);
+                model, (int)status, attempt, maxAttempts);
             await Task.Delay(TimeSpan.FromSeconds(1), ct);
         }
     }

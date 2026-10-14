@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Platform.Api.Assistant;
 using Platform.Api.Catalog.Data;
 using Platform.Api.Catalog.Ingestion;
+using Platform.Api.Catalog.Search;
 using Platform.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,8 +18,9 @@ builder.Services.AddDbContext<CatalogDbContext>(options => options
     .UseSnakeCaseNamingConvention());
 builder.Services.AddCatalogIngestion();
 
-// Swap the implementation here to change how user questions are understood
+// Swap implementations here to change how questions are understood and how the catalog is searched
 builder.Services.AddScoped<IQueryParser, LlmQueryParser>();
+builder.Services.AddScoped<ICatalogSearch, PostgresCatalogSearch>();
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ModelCircuitBreaker>();
@@ -27,7 +29,7 @@ builder.Services.AddHttpClient<ILlmClient, GeminiClient>((sp, http) =>
 {
     var baseUrl = builder.Configuration[$"{GeminiOptions.SectionName}:BaseUrl"] ?? new GeminiOptions().BaseUrl;
     http.BaseAddress = new Uri(baseUrl);
-    http.Timeout = TimeSpan.FromSeconds(60);
+    http.Timeout = TimeSpan.FromSeconds(120); // safety net only: each attempt has its own RequestTimeoutSeconds
 });
 
 var app = builder.Build();

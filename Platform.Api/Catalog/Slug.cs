@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Platform.Api.Catalog.Ingestion;
+namespace Platform.Api.Catalog;
 
 public static class Slug
 {

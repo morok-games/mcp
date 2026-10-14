@@ -12,6 +12,9 @@ public class GeminiOptions
     /// <summary>Models tried in order when the primary one is overloaded, rate-limited or retired.</summary>
     public string[] FallbackModels { get; set; } = [];
 
+    /// <summary>Per-attempt timeout; a model that does not answer in time is treated as overloaded.</summary>
+    public int RequestTimeoutSeconds { get; set; } = 45;
+
     /// <summary>How long a failed model is skipped before it is tried again.</summary>
     public int CircuitBreakSeconds { get; set; } = 300;
 

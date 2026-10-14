@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NpgsqlTypes;
 using Platform.Api.Catalog.Entities;
 
 namespace Platform.Api.Catalog.Data.Configurations;
@@ -41,5 +42,27 @@ public class OfferingConfiguration : IEntityTypeConfiguration<Offering>
         builder.HasIndex(o => new { o.BusinessId, o.SourcePlatform, o.ExternalId })
             .IsUnique()
             .HasFilter("external_id IS NOT NULL");
+
+        // Full-text search vector maintained by PostgreSQL. A shadow property keeps the Npgsql type out of the entity.
+        builder.Property<NpgsqlTsVector>(SearchVectorProperty)
+            .HasComputedColumnSql(SearchVectorSql, stored: true);
+        builder.HasIndex(SearchVectorProperty).HasMethod("gin");
     }
+
+    public const string SearchVectorProperty = "SearchVector";
+
+    // Weights drive ranking: A = name/aliases, B = tags/category, C = summary/level, D = long text.
+    // catalog_array_to_text is an IMMUTABLE wrapper over array_to_string (created in the migration),
+    // required because generated columns only accept immutable functions.
+    private const string SearchVectorSql =
+        """
+        setweight(to_tsvector('english'::regconfig, coalesce(name, '')), 'A') ||
+        setweight(to_tsvector('english'::regconfig, catalog_array_to_text(aliases)), 'A') ||
+        setweight(to_tsvector('english'::regconfig, catalog_array_to_text(tags)), 'B') ||
+        setweight(to_tsvector('english'::regconfig, coalesce(category, '')), 'B') ||
+        setweight(to_tsvector('english'::regconfig, coalesce(short_description, '')), 'C') ||
+        setweight(to_tsvector('english'::regconfig, coalesce(audience_level_text, '') || ' ' || coalesce(audience_prerequisites, '')), 'C') ||
+        setweight(to_tsvector('english'::regconfig, coalesce(description, '')), 'D') ||
+        setweight(to_tsvector('english'::regconfig, catalog_array_to_text(inclusions)), 'D')
+        """;
 }
