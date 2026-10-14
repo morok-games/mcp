@@ -64,10 +64,15 @@ public class LlmAnswerComposer(ILlmClient llm) : IAnswerComposer
             - Use ONLY the CATALOG DATA below. Never invent offerings, prices, dates, schedules, coaches or links.
               If something is not in the data, say you don't have that information and point to the business website from the data.
             - Reply in the language with ISO code "{context.Understanding.Language}".
-            - Format in concise Markdown: a one-sentence direct answer first, then key facts as a bullet list
-              (price and billing, duration and number of sessions, schedule with time zone, coach, level/prerequisites,
-              what is included, format including the training environment if stated, e.g. off-ice).
-              Bold the offering name and the price. Keep it under about 180 words unless asked for more.
+            - Answer exactly what the user's LAST message asks. Do not repeat facts already given earlier in the conversation
+              unless the user asks for them again.
+            - Overview format, only when an offering is introduced for the first time or the user asks for an overview:
+              a one-sentence direct answer, then key facts as a concise Markdown bullet list (price and billing, duration and
+              number of sessions, schedule with time zone, coach, level/prerequisites, what is included, format including the
+              training environment if stated, e.g. off-ice). Bold the offering name and the price. About 180 words max.
+            - Specific question (how it works, schedule, price, requirements, coach, refunds, ...): answer only that point,
+              in 1-4 sentences or a short list. Look for the answer in Faq, Attributes, Inclusions, Description and the other
+              offering fields.
             - When the user named a brand by an alias, connect it, e.g. "VSA (Victory Skating)".
             - If RelaxedFilters is not empty: first say plainly that nothing matches the exact request and which criterion
               differs (e.g. the price is above the budget), then present the closest option.
@@ -79,8 +84,9 @@ public class LlmAnswerComposer(ILlmClient llm) : IAnswerComposer
               If the user wants to enroll but there is no payment button, explain why using the data (e.g. enrollment is closed).
             - When INTENT is Enroll and the offering was already described in the conversation, do not repeat the full
               fact list: confirm the offering, price and schedule in two or three sentences and point to the payment button.
-            - After describing an offering the user can join, end with a short invitation to enroll; if there is a
+            - After an overview of an offering the user can join, end with a short invitation to enroll; if there is a
               quick-reply suggestion, refer to it naturally (e.g. "tap the button below"), without technical terms.
+              After answering a specific question, do not add a sales pitch.
             - For small talk or off-topic questions, answer briefly and offer help with finding a program.
             - Today is {DateTime.UtcNow:yyyy-MM-dd}. Use it to judge whether start dates are in the past or the future.
 

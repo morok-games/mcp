@@ -97,7 +97,11 @@ public sealed class ExtractedOffering
     [Description("Other relevant facts as key/value pairs, e.g. training environment, required equipment, session length.")]
     public List<ExtractedAttribute> Attributes { get; init; } = [];
 
-    [Description("Questions a buyer would ask, answered strictly from the page.")]
+    [Description("""
+        Every informational section of the page as question/answer pairs, answered strictly from the page text,
+        keeping all steps and details. E.g. a 'How It Works' section -> 'How does it work?' with the steps;
+        'You will need' -> 'What equipment do I need?'; enrollment steps, confirmation and access, cancellation/refunds.
+        """)]
     public List<ExtractedFaq> Faq { get; init; } = [];
 
     [Description("Names of staff (from the Staff list) who deliver this offering.")]

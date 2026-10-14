@@ -167,6 +167,8 @@ public partial class WebsiteCatalogAdapter : ICatalogSourceAdapter
         - CheckoutUrl must be copied exactly from the provided checkout links list, or be null.
         - If one schedule is shown in several time zones, return it once, in the business's own time zone.
         - Ignore navigation, cookie notices, testimonials and links to other products.
+        - Do not lose information: every informational section (how it works, requirements, enrollment steps, policies)
+          must end up in a field, typically as an FAQ item.
         - Report contradictions (e.g. "monthly subscription" vs a one-time 6-month price) in Warnings.
         """;
 

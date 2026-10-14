@@ -177,6 +177,14 @@ public class CatalogImporter(CatalogDbContext db)
 
     private static void ApplyPricing(PricingOption target, PricingOptionSnapshot s)
     {
+        // A review decision (switching off a misread option) applies to specific price terms. If the source now
+        // reports different terms for this option, that decision is stale and the option becomes active again.
+        var termsChanged = target.Amount != s.Amount || target.Currency != s.Currency ||
+                           target.BillingType != s.BillingType || target.BillingInterval != s.BillingInterval ||
+                           target.InstallmentCount != s.InstallmentCount;
+        if (termsChanged)
+            target.IsActive = true;
+
         target.Name = s.Name;
         target.Amount = s.Amount;
         target.Currency = s.Currency;
@@ -184,7 +192,8 @@ public class CatalogImporter(CatalogDbContext db)
         target.BillingInterval = s.BillingInterval;
         target.InstallmentCount = s.InstallmentCount;
         target.IsDefault = s.IsDefault;
-        target.IsActive = true;
+        // Otherwise IsActive is kept, so the review decision survives re-imports.
+        // An option that disappeared and came back with the same terms stays off until reviewed.
         target.CheckoutUrl = s.CheckoutUrl;
     }
 
