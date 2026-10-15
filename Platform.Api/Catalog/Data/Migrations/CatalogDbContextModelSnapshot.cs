@@ -117,6 +117,52 @@ namespace Platform.Api.Catalog.Data.Migrations
                     b.ToTable("businesses", (string)null);
                 });
 
+            modelBuilder.Entity("Platform.Api.Catalog.Entities.BusinessSource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool?>("LastImportSucceeded")
+                        .HasColumnType("boolean")
+                        .HasColumnName("last_import_succeeded");
+
+                    b.Property<string>("LastImportSummary")
+                        .HasColumnType("text")
+                        .HasColumnName("last_import_summary");
+
+                    b.Property<DateTimeOffset?>("LastImportedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_imported_at");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("platform");
+
+                    b.Property<string>("Url")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("url");
+
+                    b.HasKey("Id")
+                        .HasName("pk_business_sources");
+
+                    b.HasIndex("BusinessId")
+                        .HasDatabaseName("ix_business_sources_business_id");
+
+                    b.ToTable("business_sources", (string)null);
+                });
+
             modelBuilder.Entity("Platform.Api.Catalog.Entities.Offering", b =>
                 {
                     b.Property<Guid>("Id")
@@ -593,6 +639,18 @@ namespace Platform.Api.Catalog.Data.Migrations
                     b.ToTable("offering_staff", (string)null);
                 });
 
+            modelBuilder.Entity("Platform.Api.Catalog.Entities.BusinessSource", b =>
+                {
+                    b.HasOne("Platform.Api.Catalog.Entities.Business", "Business")
+                        .WithMany("Sources")
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_business_sources_businesses_business_id");
+
+                    b.Navigation("Business");
+                });
+
             modelBuilder.Entity("Platform.Api.Catalog.Entities.Offering", b =>
                 {
                     b.HasOne("Platform.Api.Catalog.Entities.Business", "Business")
@@ -661,6 +719,8 @@ namespace Platform.Api.Catalog.Data.Migrations
             modelBuilder.Entity("Platform.Api.Catalog.Entities.Business", b =>
                 {
                     b.Navigation("Offerings");
+
+                    b.Navigation("Sources");
 
                     b.Navigation("Staff");
                 });

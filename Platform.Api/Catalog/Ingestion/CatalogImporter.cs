@@ -47,6 +47,8 @@ public class CatalogImporter(CatalogDbContext db)
         // A business can aggregate several sources; only the source that created it owns its profile
         if (business.SourcePlatform == platform)
         {
+            // Businesses created in the admin panel get their source id on the first import
+            business.ExternalId ??= snapshot.Business.ExternalId;
             ApplyBusiness(business, snapshot.Business);
             business.VerifiedAt = now;
         }
@@ -131,8 +133,13 @@ public class CatalogImporter(CatalogDbContext db)
 
     private static void ApplyBusiness(Business target, BusinessSnapshot s)
     {
-        target.Name = s.Name;
-        target.Aliases = [.. s.Aliases];
+        // The name is set when the business is created (by an admin or the first import) and is not overwritten.
+        // The brand name as the site shows it is kept as an alias so the assistant still recognizes it.
+        target.Aliases = s.Aliases
+            .Append(s.Name)
+            .Where(a => !a.Equals(target.Name, StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
         target.Description = s.Description;
         target.WebsiteUrl = s.WebsiteUrl;
         target.DefaultCurrency = s.DefaultCurrency;

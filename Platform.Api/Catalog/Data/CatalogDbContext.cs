@@ -10,6 +10,7 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
     public DbSet<Staff> Staff => Set<Staff>();
     public DbSet<PricingOption> PricingOptions => Set<PricingOption>();
     public DbSet<OfferingInstance> OfferingInstances => Set<OfferingInstance>();
+    public DbSet<BusinessSource> BusinessSources => Set<BusinessSource>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

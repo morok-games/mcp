@@ -1,0 +1,34 @@
+@model BusinessCreateModel
+@{
+    ViewData["Title"] = "Add business";
+}
+
+<h1 class="h3 mb-3">Add business</h1>
+
+<form asp-action="Create" method="post" class="bg-body rounded shadow-sm p-4" style="max-width: 36rem">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" placeholder="Victory Skating" autofocus />
+        <span asp-validation-for="Name" class="text-danger small"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="SourceUrl" class="form-label"></label>
+        <input asp-for="SourceUrl" class="form-control" placeholder="https://victoryskating.com/doubleaxel" />
+        <span asp-validation-for="SourceUrl" class="text-danger small"></span>
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="SourcePlatform" class="form-label"></label>
+        <select asp-for="SourcePlatform" asp-items="ViewBag.Platforms" class="form-select"></select>
+        <span asp-validation-for="SourcePlatform" class="text-danger small"></span>
+        <div class="form-text">Brand aliases, time zone and currency are filled in by the import.</div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Create</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>

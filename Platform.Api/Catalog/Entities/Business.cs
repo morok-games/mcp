@@ -25,4 +25,6 @@ public class Business : CatalogEntity
     public List<Offering> Offerings { get; set; } = [];
 
     public List<Staff> Staff { get; set; } = [];
+
+    public List<BusinessSource> Sources { get; set; } = [];
 }
