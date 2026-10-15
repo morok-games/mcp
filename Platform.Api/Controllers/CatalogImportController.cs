@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Api.Catalog.Entities;
 using Platform.Api.Catalog.Ingestion;
 
 namespace Platform.Api.Controllers;
 
+// Admin only: an import spends LLM quota and overwrites catalog data
 [ApiController]
+[Authorize]
 [Route("api/catalog/import")]
 public class CatalogImportController(CatalogIngestionService ingestion, ILogger<CatalogImportController> logger) : ControllerBase
 {

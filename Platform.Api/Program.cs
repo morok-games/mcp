@@ -5,6 +5,10 @@ using ModelContextProtocol.Protocol;
 using Platform.Api.Mcp;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
+using Platform.Api;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Platform.Api.Admin;
@@ -89,9 +93,39 @@ builder.Services.AddHttpClient<ILlmClient, GeminiClient>((sp, http) =>
     http.Timeout = TimeSpan.FromSeconds(120); // safety net only: each attempt has its own RequestTimeoutSeconds
 });
 
+// Behind nginx: trust X-Forwarded-For/Proto from the local proxy so the app sees the real client IP and https scheme
+// (otherwise tracked /go links would be built as http://127.0.0.1 and HTTPS redirection would loop)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
+
+// Persist cookie encryption keys so admins stay signed in across service restarts
+var dataProtection = builder.Services.AddDataProtection().SetApplicationName("ai-commerce");
+if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+    dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+
+// Public endpoints get per-IP limits: MCP calls and admin login attempts
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(RateLimits.Mcp, context => RateLimits.PerIp(context, permitPerMinute: 60));
+    options.AddPolicy(RateLimits.Login, context => RateLimits.PerIp(context, permitPerMinute: 10));
+});
+
 var app = builder.Build();
 
+// "Platform.Api --migrate" applies database migrations for both contexts and exits (used on deployment)
+if (args.Contains("--migrate"))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<CatalogDbContext>().Database.MigrateAsync();
+    await scope.ServiceProvider.GetRequiredService<AdminDbContext>().Database.MigrateAsync();
+    app.Logger.LogInformation("Database migrations applied");
+    return;
+}
+
 await app.SeedAdminAsync();
+
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {
@@ -100,17 +134,16 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseStaticFiles();
-
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapAreaControllerRoute(
     name: "admin",
     areaName: "Admin",
     pattern: "admin/{controller=Businesses}/{action=Index}/{id?}");
 app.MapControllers();
-app.MapMcp("/mcp");
+app.MapMcp("/mcp").RequireRateLimiting(RateLimits.Mcp);
 
 // The chat lives in the admin panel now; the site root leads there
 app.MapGet("/", () => Results.Redirect("/admin/Chat"));

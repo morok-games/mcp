@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Platform.Api.Admin;
 using Platform.Api.Areas.Admin.Models;
@@ -20,7 +21,8 @@ public class AccountController(
     [HttpGet, AllowAnonymous]
     public IActionResult Login(string? returnUrl) => View(new LoginModel { ReturnUrl = returnUrl });
 
-    [HttpPost, AllowAnonymous]
+    // Slows down password guessing: limited attempts per IP per minute
+    [HttpPost, AllowAnonymous, EnableRateLimiting(RateLimits.Login)]
     public async Task<IActionResult> Login(LoginModel model, CancellationToken ct)
     {
         if (!ModelState.IsValid)

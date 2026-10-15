@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Platform.Api.Catalog.Data;
@@ -10,6 +11,7 @@ namespace Platform.Api.Controllers;
 /// (or Archived to hide them). Also allows switching off pricing options misread by the importer.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/catalog")]
 public class CatalogReviewController(CatalogDbContext db) : ControllerBase
 {
