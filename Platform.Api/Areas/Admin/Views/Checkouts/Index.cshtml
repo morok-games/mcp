@@ -1,0 +1,49 @@
+@using Platform.Api.Catalog.Checkout
+@model IReadOnlyList<CheckoutRow>
+@{
+    ViewData["Title"] = "Checkouts";
+}
+
+<h1 class="h3 mb-3">Checkouts</h1>
+
+@if (Model.Count == 0)
+{
+    <div class="text-secondary">No checkout links yet.</div>
+}
+else
+{
+    <div class="table-responsive bg-body rounded shadow-sm">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Brand</th>
+                    <th>Offering</th>
+                    <th class="text-end">Price</th>
+                    <th>Client</th>
+                    <th>Status</th>
+                    <th class="text-end">Clicks</th>
+                    <th>Issued</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr>
+                        <td>@r.Brand</td>
+                        <td>@r.Offering</td>
+                        <td class="text-end text-nowrap">@r.Amount.ToString("0.##") @r.Currency</td>
+                        @* Client tells the channel apart: "Web chat" or the MCP client name / User-Agent *@
+                        <td class="small text-break" style="max-width: 14rem">@(r.ClientName ?? (r.Channel == CheckoutChannel.Mcp ? "MCP" : "Web chat"))</td>
+                        <td>
+                            <span class="badge @(r.Status == CheckoutSessionStatus.Opened ? "text-bg-success" : "text-bg-secondary")">
+                                @(r.Status == CheckoutSessionStatus.Opened ? "Opened" : "Not opened")
+                            </span>
+                        </td>
+                        <td class="text-end">@r.OpenCount</td>
+                        <td class="text-nowrap small">@r.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
