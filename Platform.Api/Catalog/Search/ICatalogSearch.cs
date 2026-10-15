@@ -9,10 +9,19 @@ namespace Platform.Api.Catalog.Search;
 public interface ICatalogSearch
 {
     Task<CatalogSearchResult> SearchAsync(CatalogSearchRequest request, CancellationToken ct = default);
+
+    /// <summary>One offering by its slugs; null if it does not exist or is archived.</summary>
+    Task<OfferingCard?> GetOfferingAsync(string businessSlug, string offeringSlug, CancellationToken ct = default);
 }
 
 public sealed record CatalogSearchRequest
 {
+    /// <summary>
+    /// Free-text request, e.g. from an external AI client: brands are detected in it by name/alias,
+    /// the remaining words are used for full-text search.
+    /// </summary>
+    public string? Query { get; init; }
+
     /// <summary>Brand names as written by the user; resolved against Business name/aliases/slug.</summary>
     public IReadOnlyList<string> BrandMentions { get; init; } = [];
 

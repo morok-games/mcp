@@ -99,3 +99,26 @@ Content-Type: application/json
 }
 
 ###
+
+### MCP: list tools (JSON-RPC over Streamable HTTP, the way ChatGPT/Claude/Perplexity call the server)
+POST {{Platform.Api_HostAddress}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{ "jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {} }
+
+### MCP: search offerings
+POST {{Platform.Api_HostAddress}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{ "jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": { "name": "search_offerings", "arguments": { "query": "Does VSA offer online training for Double Axel?", "maxPrice": 350 } } }
+
+### MCP: start checkout
+POST {{Platform.Api_HostAddress}}/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "create_checkout", "arguments": { "businessSlug": "victory-skating", "offeringSlug": "doubleaxel" } } }
+
+###

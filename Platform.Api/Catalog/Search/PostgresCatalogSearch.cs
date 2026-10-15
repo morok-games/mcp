@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using NpgsqlTypes;
 using Platform.Api.Catalog.Data;
@@ -18,11 +19,21 @@ public class PostgresCatalogSearch(CatalogDbContext db) : ICatalogSearch
 {
     private const string TextSearchConfig = "english";
 
+    // websearch_to_tsquery ignores these anyway; dropping them keeps match reasons free of noise like "'an' found"
+    private static readonly HashSet<string> StopWords =
+    [
+        "a", "an", "and", "any", "are", "as", "at", "be", "can", "do", "does", "for", "from", "have", "has", "i", "in",
+        "is", "it", "me", "my", "of", "on", "or", "the", "there", "to", "want", "what", "with", "you", "your", "anything"
+    ];
+
     private static readonly SearchFilter[] RelaxationOrder =
         [SearchFilter.Duration, SearchFilter.Kind, SearchFilter.DeliveryMode, SearchFilter.MaxPrice, SearchFilter.Text];
 
     public async Task<CatalogSearchResult> SearchAsync(CatalogSearchRequest request, CancellationToken ct = default)
     {
+        if (!string.IsNullOrWhiteSpace(request.Query))
+            request = await ExpandFreeTextAsync(request, ct);
+
         var (businesses, businessIds, unknownBrands) = await ResolveBrandsAsync(request.BrandMentions, ct);
 
         // The user asked about a brand we do not have: return nothing rather than other brands' offerings
@@ -47,6 +58,57 @@ public class PostgresCatalogSearch(CatalogDbContext db) : ICatalogSearch
 
             relaxed.Add(applicable.First(f => !relaxed.Contains(f)));
         }
+    }
+
+    /// <summary>
+    /// Turns a free-text query into structured criteria: business names/aliases found in it (as whole words)
+    /// become brand mentions, the remaining words become keywords.
+    /// </summary>
+    private async Task<CatalogSearchRequest> ExpandFreeTextAsync(CatalogSearchRequest request, CancellationToken ct)
+    {
+        var text = request.Query!;
+
+        // Fine for a catalog of hundreds of businesses; a larger one would match aliases in SQL
+        var names = await db.Businesses.AsNoTracking()
+            .Select(b => new { b.Name, b.Aliases })
+            .ToListAsync(ct);
+
+        var detectedBrands = new List<string>();
+        foreach (var name in names.SelectMany(b => b.Aliases.Prepend(b.Name)).OrderByDescending(n => n.Length))
+        {
+            var pattern = $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(name)}(?![\p{{L}}\p{{N}}])";
+            if (!Regex.IsMatch(text, pattern, RegexOptions.IgnoreCase))
+                continue;
+
+            detectedBrands.Add(name);
+            // Brand words should not drive full-text matching
+            text = Regex.Replace(text, pattern, " ", RegexOptions.IgnoreCase);
+        }
+
+        var words = Regex.Matches(text, @"[\p{L}\p{N}]+")
+            .Select(m => m.Value.ToLowerInvariant())
+            .Where(w => w.Length >= 2 && !StopWords.Contains(w));
+
+        return request with
+        {
+            Query = null,
+            BrandMentions = request.BrandMentions.Concat(detectedBrands).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            Keywords = request.Keywords.Concat(words).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+        };
+    }
+
+    public async Task<OfferingCard?> GetOfferingAsync(string businessSlug, string offeringSlug, CancellationToken ct = default)
+    {
+        var offering = await db.Offerings.AsNoTracking()
+            .Where(o => o.Business.Slug == businessSlug && o.Slug == offeringSlug && o.Status != OfferingStatus.Archived)
+            .Include(o => o.Business)
+            .Include(o => o.Staff)
+            .Include(o => o.PricingOptions.Where(p => p.IsActive))
+            .Include(o => o.Instances)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(ct);
+
+        return offering is null ? null : ToCard(offering);
     }
 
     private async Task<(List<BusinessMatch> Matches, List<Guid> Ids, List<string> Unknown)> ResolveBrandsAsync(

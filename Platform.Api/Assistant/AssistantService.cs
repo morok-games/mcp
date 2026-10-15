@@ -1,6 +1,5 @@
 using System.Diagnostics;
-using System.Globalization;
-using Platform.Api.Catalog.Entities;
+using Platform.Api.Catalog.Checkout;
 using Platform.Api.Catalog.Search;
 using Platform.Api.Models;
 
@@ -51,34 +50,15 @@ public class AssistantService(
 
         if (understanding.Intent == QueryIntent.Enroll)
         {
-            var price = top.PricingOptions.FirstOrDefault(p => p.IsDefault && p.CheckoutUrl is not null)
-                        ?? top.PricingOptions.FirstOrDefault(p => p.CheckoutUrl is not null);
-
-            return price is not null && CanEnroll(top)
-                ? [new ChatAction(ChatActionType.Checkout, $"Enroll in {top.Name} — {FormatPrice(price)}", Url: price.CheckoutUrl)]
+            var decision = CheckoutPolicy.Decide(top);
+            return decision.Price is { } price
+                ? [new ChatAction(ChatActionType.Checkout, $"Enroll in {top.Name} — {CheckoutPolicy.FormatPrice(price)}", Url: price.CheckoutUrl)]
                 : [];
         }
 
         return understanding.Intent is QueryIntent.FindOffering or QueryIntent.OfferingDetails or QueryIntent.Compare
-               && CanEnroll(top)
+               && CheckoutPolicy.CanEnroll(top)
             ? [new ChatAction(ChatActionType.Reply, $"I want to join {top.Name}", Text: $"I want to join the {top.Name}.")]
             : [];
-    }
-
-    /// <summary>Enrollment is possible when the current run is open, or when no runs are published (rolling enrollment).</summary>
-    private static bool CanEnroll(OfferingCard offering) =>
-        offering.CurrentInstance is null || offering.CurrentInstance.EnrollmentStatus == EnrollmentStatus.Open;
-
-    private static string FormatPrice(PriceCard price)
-    {
-        var amount = price.Amount.ToString("0.##", CultureInfo.InvariantCulture);
-        var symbol = price.Currency == "USD" ? "$" : price.Currency + " ";
-
-        return price.BillingType switch
-        {
-            BillingType.Recurring when price.BillingInterval is { } interval => $"{symbol}{amount}/{interval.ToString().ToLowerInvariant()}",
-            BillingType.Installments when price.InstallmentCount is { } count => $"{count} × {symbol}{amount}",
-            _ => $"{symbol}{amount}"
-        };
     }
 }
