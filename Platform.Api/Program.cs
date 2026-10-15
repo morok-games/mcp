@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Platform.Api.Admin;
 using Platform.Api.Assistant;
+using Platform.Api.Catalog.Checkout;
 using Platform.Api.Catalog.Data;
 using Platform.Api.Catalog.Ingestion;
 using Platform.Api.Catalog.Search;
@@ -51,6 +52,10 @@ builder.Services.AddScoped<IQueryParser, LlmQueryParser>();
 builder.Services.AddScoped<ICatalogSearch, PostgresCatalogSearch>();
 builder.Services.AddScoped<IAnswerComposer, LlmAnswerComposer>();
 builder.Services.AddScoped<AssistantService>();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.Configure<CheckoutOptions>(builder.Configuration.GetSection(CheckoutOptions.SectionName));
+builder.Services.AddScoped<CheckoutTracker>();
 
 // Remote MCP server for external AI assistants (ChatGPT, Claude, Perplexity); stateless Streamable HTTP at /mcp
 builder.Services.AddMcpServer(options =>

@@ -13,6 +13,7 @@ public class AssistantService(
     IQueryParser queryParser,
     ICatalogSearch catalogSearch,
     IAnswerComposer answerComposer,
+    CheckoutTracker checkoutTracker,
     ILogger<AssistantService> logger)
 {
     public async Task<ChatResponse> ReplyAsync(IReadOnlyList<ChatMessage> history, CancellationToken ct = default)
@@ -27,7 +28,7 @@ public class AssistantService(
             : null;
         var searchedIn = total.Elapsed - parsedIn;
 
-        var actions = BuildActions(understanding, search);
+        var actions = await BuildActionsAsync(understanding, search, ct);
         var reply = await answerComposer.ComposeAsync(new AnswerContext(history, understanding, search, actions), ct);
 
         logger.LogInformation(
@@ -42,7 +43,8 @@ public class AssistantService(
     /// Enroll intent -> checkout button for the matched offering (only if enrollment is possible).
     /// Discovery/details -> quick reply that leads to enrollment.
     /// </summary>
-    private static List<ChatAction> BuildActions(QueryUnderstanding understanding, CatalogSearchResult? search)
+    private async Task<List<ChatAction>> BuildActionsAsync(QueryUnderstanding understanding, CatalogSearchResult? search,
+        CancellationToken ct)
     {
         var top = search?.Hits.FirstOrDefault()?.Offering;
         if (top is null)
@@ -50,10 +52,12 @@ public class AssistantService(
 
         if (understanding.Intent == QueryIntent.Enroll)
         {
-            var decision = CheckoutPolicy.Decide(top);
-            return decision.Price is { } price
-                ? [new ChatAction(ChatActionType.Checkout, $"Enroll in {top.Name} — {CheckoutPolicy.FormatPrice(price)}", Url: price.CheckoutUrl)]
-                : [];
+            if (CheckoutPolicy.Decide(top).Price is not { } price)
+                return [];
+
+            // The button leads through our redirect so the transition to payment is recorded
+            var link = await checkoutTracker.CreateLinkAsync(price, CheckoutChannel.WebChat, clientName: "Web chat", ct);
+            return [new ChatAction(ChatActionType.Checkout, $"Enroll in {top.Name} — {CheckoutPolicy.FormatPrice(price)}", Url: link)];
         }
 
         return understanding.Intent is QueryIntent.FindOffering or QueryIntent.OfferingDetails or QueryIntent.Compare

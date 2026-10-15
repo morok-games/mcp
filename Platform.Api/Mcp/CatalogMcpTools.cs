@@ -12,7 +12,11 @@ namespace Platform.Api.Mcp;
 /// The client's own LLM understands the user and writes the answer; these tools only return verified
 /// catalog data and the checkout link, reusing the same search and checkout rules as our chat.
 /// </summary>
-public class CatalogMcpTools(ICatalogSearch catalogSearch, ILogger<CatalogMcpTools> logger)
+public class CatalogMcpTools(
+    ICatalogSearch catalogSearch,
+    CheckoutTracker checkoutTracker,
+    IHttpContextAccessor httpContextAccessor,
+    ILogger<CatalogMcpTools> logger)
 {
     private const int MaxResults = 10;
 
@@ -91,6 +95,7 @@ public class CatalogMcpTools(ICatalogSearch catalogSearch, ILogger<CatalogMcpToo
         Give the user the link as a clickable link together with the price.
         """)]
     public async Task<McpCheckout> CreateCheckout(
+        McpServer server,
         [Description("offering.business.slug from search_offerings.")]
         string businessSlug,
         [Description("offering.slug from search_offerings.")]
@@ -106,11 +111,16 @@ public class CatalogMcpTools(ICatalogSearch catalogSearch, ILogger<CatalogMcpToo
         if (decision.Price is not { } price)
             throw new McpException(decision.Reason!);
 
-        logger.LogInformation("MCP create_checkout {Business}/{Offering}: {Price} -> {Url}",
-            businessSlug, offeringSlug, CheckoutPolicy.FormatPrice(price), price.CheckoutUrl);
+        // The client name comes from MCP initialize; stateless requests may not carry it, so fall back to User-Agent
+        var clientName = server.ClientInfo?.Name
+                         ?? httpContextAccessor.HttpContext?.Request.Headers.UserAgent.ToString();
+        var link = await checkoutTracker.CreateLinkAsync(price, CheckoutChannel.Mcp, clientName, ct);
+
+        logger.LogInformation("MCP create_checkout {Business}/{Offering} by {Client}: {Price} -> {Url}",
+            businessSlug, offeringSlug, clientName, CheckoutPolicy.FormatPrice(price), link);
 
         return new McpCheckout(
-            CheckoutUrl: price.CheckoutUrl!,
+            CheckoutUrl: link,
             BusinessName: offering.Business.Name,
             OfferingName: offering.Name,
             PricingOption: price.Name,

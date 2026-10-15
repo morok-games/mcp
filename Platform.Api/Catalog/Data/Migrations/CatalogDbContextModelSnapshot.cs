@@ -24,6 +24,86 @@ namespace Platform.Api.Catalog.Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Platform.Api.Catalog.Checkout.CheckoutSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("BusinessId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("business_id");
+
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("channel");
+
+                    b.Property<string>("ClientName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("client_name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("DestinationUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("destination_url");
+
+                    b.Property<Guid>("OfferingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("offering_id");
+
+                    b.Property<int>("OpenCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("open_count");
+
+                    b.Property<DateTimeOffset?>("OpenedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("opened_at");
+
+                    b.Property<Guid>("PricingOptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pricing_option_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_checkout_sessions");
+
+                    b.HasIndex("OfferingId")
+                        .HasDatabaseName("ix_checkout_sessions_offering_id");
+
+                    b.HasIndex("PricingOptionId")
+                        .HasDatabaseName("ix_checkout_sessions_pricing_option_id");
+
+                    b.HasIndex("BusinessId", "CreatedAt")
+                        .HasDatabaseName("ix_checkout_sessions_business_id_created_at");
+
+                    b.ToTable("checkout_sessions", (string)null);
+                });
+
             modelBuilder.Entity("Platform.Api.Catalog.Entities.Business", b =>
                 {
                     b.Property<Guid>("Id")
@@ -637,6 +717,36 @@ namespace Platform.Api.Catalog.Data.Migrations
                         .HasDatabaseName("ix_offering_staff_staff_id");
 
                     b.ToTable("offering_staff", (string)null);
+                });
+
+            modelBuilder.Entity("Platform.Api.Catalog.Checkout.CheckoutSession", b =>
+                {
+                    b.HasOne("Platform.Api.Catalog.Entities.Business", "Business")
+                        .WithMany()
+                        .HasForeignKey("BusinessId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_checkout_sessions_businesses_business_id");
+
+                    b.HasOne("Platform.Api.Catalog.Entities.Offering", "Offering")
+                        .WithMany()
+                        .HasForeignKey("OfferingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_checkout_sessions_offerings_offering_id");
+
+                    b.HasOne("Platform.Api.Catalog.Entities.PricingOption", "PricingOption")
+                        .WithMany()
+                        .HasForeignKey("PricingOptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_checkout_sessions_pricing_options_pricing_option_id");
+
+                    b.Navigation("Business");
+
+                    b.Navigation("Offering");
+
+                    b.Navigation("PricingOption");
                 });
 
             modelBuilder.Entity("Platform.Api.Catalog.Entities.BusinessSource", b =>

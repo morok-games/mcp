@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Platform.Api.Catalog.Checkout;
 using Platform.Api.Catalog.Entities;
 
 namespace Platform.Api.Catalog.Data;
@@ -11,6 +12,7 @@ public class CatalogDbContext(DbContextOptions<CatalogDbContext> options) : DbCo
     public DbSet<PricingOption> PricingOptions => Set<PricingOption>();
     public DbSet<OfferingInstance> OfferingInstances => Set<OfferingInstance>();
     public DbSet<BusinessSource> BusinessSources => Set<BusinessSource>();
+    public DbSet<CheckoutSession> CheckoutSessions => Set<CheckoutSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
