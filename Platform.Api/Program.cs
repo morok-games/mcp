@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using Platform.Api.Mcp;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +45,9 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
+        // API callers (the chat page's fetch) get 401/403 instead of an HTML login redirect
+        options.Events.OnRedirectToLogin = context => ApiAwareRedirect(context, StatusCodes.Status401Unauthorized);
+        options.Events.OnRedirectToAccessDenied = context => ApiAwareRedirect(context, StatusCodes.Status403Forbidden);
     });
 builder.Services.AddAuthorization();
 
@@ -96,8 +100,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// wwwroot/index.html is the chat UI
-app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseAuthentication();
@@ -110,4 +112,17 @@ app.MapAreaControllerRoute(
 app.MapControllers();
 app.MapMcp("/mcp");
 
+// The chat lives in the admin panel now; the site root leads there
+app.MapGet("/", () => Results.Redirect("/admin/Chat"));
+
 app.Run();
+
+static Task ApiAwareRedirect(RedirectContext<CookieAuthenticationOptions> context, int apiStatusCode)
+{
+    if (context.Request.Path.StartsWithSegments("/api"))
+        context.Response.StatusCode = apiStatusCode;
+    else
+        context.Response.Redirect(context.RedirectUri);
+
+    return Task.CompletedTask;
+}

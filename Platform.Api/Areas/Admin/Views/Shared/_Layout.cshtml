@@ -16,7 +16,7 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item"><a class="nav-link" asp-area="Admin" asp-controller="Businesses" asp-action="Index">Businesses</a></li>
                     <li class="nav-item"><a class="nav-link" asp-area="Admin" asp-controller="Checkouts" asp-action="Index">Checkouts</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/" target="_blank">Open chat</a></li>
+                    <li class="nav-item"><a class="nav-link" asp-area="Admin" asp-controller="Chat" asp-action="Index">Chat</a></li>
                 </ul>
                 <div class="d-flex align-items-center gap-3">
                     <span class="navbar-text small">@User.Identity.Name</span>

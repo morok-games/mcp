@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Api.Assistant;
 using Platform.Api.Catalog.Search;
@@ -6,7 +7,9 @@ using Platform.Api.Services;
 
 namespace Platform.Api.Controllers;
 
+// Used by the admin chat playground; closed to the public so nobody else spends the LLM quota
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class ChatController(
     AssistantService assistant,

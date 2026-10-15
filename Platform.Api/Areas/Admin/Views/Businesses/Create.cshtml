@@ -24,7 +24,12 @@
         <label asp-for="SourcePlatform" class="form-label"></label>
         <select asp-for="SourcePlatform" asp-items="ViewBag.Platforms" class="form-select"></select>
         <span asp-validation-for="SourcePlatform" class="text-danger small"></span>
-        <div class="form-text">Brand aliases, time zone and currency are filled in by the import.</div>
+        <div class="mt-2">
+            <span class="badge text-bg-warning fw-normal text-wrap text-start" title="The free tier is often overloaded; the server falls back to other models, which takes extra time">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                Import uses a free Gemini API key, so it may take a while
+            </span>
+        </div>
     </div>
 
     <div class="d-flex gap-2">
