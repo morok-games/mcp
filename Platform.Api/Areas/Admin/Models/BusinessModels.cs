@@ -16,6 +16,21 @@ public record BusinessSourceRow(
     public bool HasWarnings => LastImportSucceeded == true && !string.IsNullOrWhiteSpace(LastImportSummary);
 }
 
+public record BusinessDetails(string Name, IReadOnlyList<OfferingRow> Offerings, IReadOnlyList<StaffRow> Staff);
+
+public record OfferingRow(
+    string Name,
+    OfferingKind Kind,
+    OfferingStatus Status,
+    DeliveryMode DeliveryMode,
+    string? Duration,
+    int? SessionCount,
+    string? Level,
+    IReadOnlyList<string> Prices,
+    IReadOnlyList<string> Staff);
+
+public record StaffRow(string Name, string? Role, string? Credentials);
+
 /// <summary>Minimal form: the profile (aliases, time zone, currency, description) is filled by the import.</summary>
 public class BusinessCreateModel
 {

@@ -1,0 +1,97 @@
+@model BusinessDetails
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">@Model.Name</h1>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to businesses</a>
+</div>
+
+<h2 class="h6 text-secondary text-uppercase">Offerings</h2>
+@if (Model.Offerings.Count == 0)
+{
+    <div class="text-secondary mb-4">No offerings yet. Run the import to load them.</div>
+}
+else
+{
+    <div class="table-responsive bg-body rounded shadow-sm mb-4">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Kind</th>
+                    <th>Status</th>
+                    <th>Delivery</th>
+                    <th>Duration</th>
+                    <th class="text-end">Sessions</th>
+                    <th>Level</th>
+                    <th>Prices</th>
+                    <th>Staff</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in Model.Offerings)
+                {
+                    <tr>
+                        <td class="fw-semibold">@o.Name</td>
+                        <td>@o.Kind</td>
+                        <td>
+                            <span class="badge @(o.Status switch
+                            {
+                                OfferingStatus.Active => "text-bg-success",
+                                OfferingStatus.Draft => "text-bg-secondary",
+                                _ => "text-bg-light border"
+                            })">@o.Status</span>
+                        </td>
+                        <td>@o.DeliveryMode</td>
+                        <td>@(o.Duration ?? "—")</td>
+                        <td class="text-end">@(o.SessionCount?.ToString() ?? "—")</td>
+                        <td>@(o.Level ?? "—")</td>
+                        <td class="small">
+                            @if (o.Prices.Count == 0)
+                            {
+                                <span class="text-secondary">—</span>
+                            }
+                            @foreach (var price in o.Prices)
+                            {
+                                <div>@price</div>
+                            }
+                        </td>
+                        <td>@(o.Staff.Count > 0 ? string.Join(", ", o.Staff) : "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<h2 class="h6 text-secondary text-uppercase">Staff</h2>
+@if (Model.Staff.Count == 0)
+{
+    <div class="text-secondary">No staff yet.</div>
+}
+else
+{
+    <div class="table-responsive bg-body rounded shadow-sm">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Credentials</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model.Staff)
+                {
+                    <tr>
+                        <td class="fw-semibold">@s.Name</td>
+                        <td>@(s.Role ?? "—")</td>
+                        <td class="small">@(s.Credentials ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

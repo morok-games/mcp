@@ -34,6 +34,40 @@ public class BusinessesController(
         return View(rows);
     }
 
+    /// <summary>What the import produced for a business: its offerings and staff.</summary>
+    public async Task<IActionResult> Details(Guid id, CancellationToken ct)
+    {
+        var business = await db.Businesses.AsNoTracking()
+            .Where(b => b.Id == id)
+            .Include(b => b.Offerings).ThenInclude(o => o.PricingOptions)
+            .Include(b => b.Offerings).ThenInclude(o => o.Staff)
+            .Include(b => b.Staff)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(ct);
+
+        if (business is null)
+            return NotFound();
+
+        var offerings = business.Offerings
+            .OrderBy(o => o.Status == OfferingStatus.Archived).ThenBy(o => o.Name)
+            .Select(o => new OfferingRow(
+                o.Name, o.Kind, o.Status, o.DeliveryMode, o.Duration, o.SessionCount, o.Audience.LevelText,
+                o.PricingOptions
+                    .Where(p => p.IsActive)
+                    .OrderByDescending(p => p.IsDefault).ThenBy(p => p.Amount)
+                    .Select(p => $"{p.Name}: {p.Amount:0.##} {p.Currency} ({p.BillingType})")
+                    .ToList(),
+                o.Staff.Select(s => s.Name).OrderBy(n => n).ToList()))
+            .ToList();
+
+        var staff = business.Staff
+            .OrderBy(s => s.Name)
+            .Select(s => new StaffRow(s.Name, s.Role, s.Credentials))
+            .ToList();
+
+        return View(new BusinessDetails(business.Name, offerings, staff));
+    }
+
     [HttpGet]
     public IActionResult Create()
     {
