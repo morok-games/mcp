@@ -6,8 +6,8 @@ using Platform.Api.Catalog.Entities;
 namespace Platform.Api.Controllers;
 
 /// <summary>
-/// Review step between import and publishing: imported offerings start as Draft and are invisible to the assistant
-/// until a person checks them and sets Active. Also allows switching off pricing options misread by the importer.
+/// Review step after import: imported offerings start as Draft and a person can check them and set Active
+/// (or Archived to hide them). Also allows switching off pricing options misread by the importer.
 /// </summary>
 [ApiController]
 [Route("api/catalog")]

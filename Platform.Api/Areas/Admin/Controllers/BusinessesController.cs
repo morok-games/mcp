@@ -122,7 +122,7 @@ public class BusinessesController(
             summary = snapshot.Warnings.Count > 0 ? string.Join("\n", snapshot.Warnings) : null;
 
             TempData["Success"] = $"Import for '{business.Name}' finished: {result.Created} created, {result.Updated} updated, " +
-                                  $"{result.Deactivated} deactivated. New offerings are Draft until reviewed.";
+                                  $"{result.Deactivated} deactivated.";
         }
         catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or NotSupportedException)
         {

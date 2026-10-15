@@ -3,7 +3,7 @@ using Platform.Api.Catalog.Entities;
 namespace Platform.Api.Catalog.Search;
 
 /// <summary>
-/// Finds active offerings for structured search criteria. Implementations are interchangeable
+/// Finds non-archived offerings for structured search criteria. Implementations are interchangeable
 /// (PostgreSQL full-text, vector search, external engine).
 /// </summary>
 public interface ICatalogSearch

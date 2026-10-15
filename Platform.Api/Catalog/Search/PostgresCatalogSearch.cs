@@ -117,7 +117,8 @@ public class PostgresCatalogSearch(CatalogDbContext db) : ICatalogSearch
     private async Task<List<(Guid Id, float Rank)>> FindRankedIdsAsync(CatalogSearchRequest r, List<Guid> businessIds,
         string? tsQuery, HashSet<SearchFilter> active, CancellationToken ct)
     {
-        var query = db.Offerings.AsNoTracking().Where(o => o.Status == OfferingStatus.Active);
+        // Draft offerings are searchable for now (no review step in the admin panel yet); archived ones are gone from the source
+        var query = db.Offerings.AsNoTracking().Where(o => o.Status != OfferingStatus.Archived);
 
         if (businessIds.Count > 0)
             query = query.Where(o => businessIds.Contains(o.BusinessId));
