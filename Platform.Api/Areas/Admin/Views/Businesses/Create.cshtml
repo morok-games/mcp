@@ -32,6 +32,14 @@
         </div>
     </div>
 
+    <div class="mb-4">
+        <label asp-for="ExtractionInstructions" class="form-label"></label>
+        <textarea asp-for="ExtractionInstructions" class="form-control" rows="5"
+                  placeholder="'$6/class' is a derived per-class price, not a separate pricing option."></textarea>
+        <span asp-validation-for="ExtractionInstructions" class="text-danger small"></span>
+        <div class="form-text">Hints for the AI that parses this site, e.g. how to read its prices or dates. Can be changed later.</div>
+    </div>
+
     <div class="d-flex gap-2">
         <button type="submit" class="btn btn-primary">Create</button>
         <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>

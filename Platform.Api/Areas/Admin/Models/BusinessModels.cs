@@ -43,4 +43,24 @@ public class BusinessCreateModel
 
     [Display(Name = "Adapter")]
     public SourcePlatform SourcePlatform { get; set; } = SourcePlatform.Tilda;
+
+    [StringLength(BusinessSource.MaxInstructionsLength)]
+    [Display(Name = "Extraction instructions (optional)")]
+    public string? ExtractionInstructions { get; set; }
+}
+
+/// <summary>Only the extraction instructions can be changed; the rest is shown read-only.</summary>
+public class BusinessEditModel
+{
+    public Guid Id { get; set; }
+
+    public string Name { get; set; } = "";
+
+    public SourcePlatform SourcePlatform { get; set; }
+
+    public string? SourceUrl { get; set; }
+
+    [StringLength(BusinessSource.MaxInstructionsLength)]
+    [Display(Name = "Extraction instructions")]
+    public string? ExtractionInstructions { get; set; }
 }

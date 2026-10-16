@@ -21,8 +21,10 @@ public interface ICatalogSourceAdapter
 /// <param name="BusinessSlug">Business in our system the data belongs to.</param>
 /// <param name="Url">Entry point for website-based sources (Tilda, WordPress, custom sites).</param>
 /// <param name="Settings">Platform-specific settings: shop domain, site id, API token reference, etc.</param>
+/// <param name="ExtractionInstructions">Admin hints for LLM-based adapters about this particular source.</param>
 public sealed record CatalogSource(
     SourcePlatform Platform,
     string BusinessSlug,
     Uri? Url = null,
-    IReadOnlyDictionary<string, string>? Settings = null);
+    IReadOnlyDictionary<string, string>? Settings = null,
+    string? ExtractionInstructions = null);

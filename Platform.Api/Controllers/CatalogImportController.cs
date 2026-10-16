@@ -15,7 +15,8 @@ public class CatalogImportController(CatalogIngestionService ingestion, ILogger<
         SourcePlatform Platform,
         string BusinessSlug,
         Uri? Url,
-        Dictionary<string, string>? Settings);
+        Dictionary<string, string>? Settings,
+        string? ExtractionInstructions = null);
 
     public record ImportResponse(CatalogSnapshot Snapshot, CatalogImportResult? Result);
 
@@ -26,7 +27,8 @@ public class CatalogImportController(CatalogIngestionService ingestion, ILogger<
     [HttpPost]
     public async Task<ActionResult<ImportResponse>> Import([FromBody] ImportRequest request, [FromQuery] bool dryRun, CancellationToken ct)
     {
-        var source = new CatalogSource(request.Platform, request.BusinessSlug, request.Url, request.Settings);
+        var source = new CatalogSource(request.Platform, request.BusinessSlug, request.Url, request.Settings,
+            request.ExtractionInstructions);
 
         try
         {

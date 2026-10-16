@@ -211,6 +211,11 @@ namespace Platform.Api.Catalog.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("ExtractionInstructions")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("extraction_instructions");
+
                     b.Property<bool?>("LastImportSucceeded")
                         .HasColumnType("boolean")
                         .HasColumnName("last_import_succeeded");

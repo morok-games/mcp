@@ -104,13 +104,65 @@ public class BusinessesController(
             // description (and refines the name as the site presents it)
             SourcePlatform = model.SourcePlatform,
             WebsiteUrl = sourceUri!.GetLeftPart(UriPartial.Authority),
-            Sources = [new BusinessSource { Platform = model.SourcePlatform, Url = sourceUri.ToString(), CreatedAt = now }]
+            Sources =
+            [
+                new BusinessSource
+                {
+                    Platform = model.SourcePlatform,
+                    Url = sourceUri.ToString(),
+                    ExtractionInstructions = NormalizeInstructions(model.ExtractionInstructions),
+                    CreatedAt = now
+                }
+            ]
         };
 
         db.Businesses.Add(business);
         await db.SaveChangesAsync(ct);
 
         TempData["Success"] = $"Business '{business.Name}' created. Run the import to load its offerings.";
+        return RedirectToAction(nameof(Index));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Edit(Guid id, CancellationToken ct)
+    {
+        var model = await db.Businesses.AsNoTracking()
+            .Where(b => b.Id == id)
+            .Select(b => new BusinessEditModel
+            {
+                Id = b.Id,
+                Name = b.Name,
+                SourcePlatform = b.Sources.OrderBy(s => s.CreatedAt).Select(s => s.Platform).FirstOrDefault(),
+                SourceUrl = b.Sources.OrderBy(s => s.CreatedAt).Select(s => s.Url).FirstOrDefault(),
+                ExtractionInstructions = b.Sources.OrderBy(s => s.CreatedAt).Select(s => s.ExtractionInstructions).FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(ct);
+
+        return model is null ? NotFound() : View(model);
+    }
+
+    /// <summary>Saves only the extraction instructions; name, link and adapter are not editable.</summary>
+    [HttpPost]
+    public async Task<IActionResult> Edit(Guid id, BusinessEditModel model, CancellationToken ct)
+    {
+        var business = await db.Businesses.Include(b => b.Sources).FirstOrDefaultAsync(b => b.Id == id, ct);
+        var source = business?.Sources.OrderBy(s => s.CreatedAt).FirstOrDefault();
+        if (business is null || source is null)
+            return NotFound();
+
+        if (!ModelState.IsValid)
+        {
+            // Read-only fields come from the database, not from the posted form
+            model.Name = business.Name;
+            model.SourcePlatform = source.Platform;
+            model.SourceUrl = source.Url;
+            return View(model);
+        }
+
+        source.ExtractionInstructions = NormalizeInstructions(model.ExtractionInstructions);
+        await db.SaveChangesAsync(ct);
+
+        TempData["Success"] = $"Extraction instructions for '{business.Name}' saved. Run the import to apply them.";
         return RedirectToAction(nameof(Index));
     }
 
@@ -150,7 +202,8 @@ public class BusinessesController(
         try
         {
             var (snapshot, result) = await ingestion.IngestAsync(
-                new CatalogSource(source.Platform, business.Slug, new Uri(source.Url)), ct);
+                new CatalogSource(source.Platform, business.Slug, new Uri(source.Url),
+                    ExtractionInstructions: source.ExtractionInstructions), ct);
 
             succeeded = true;
             summary = snapshot.Warnings.Count > 0 ? string.Join("\n", snapshot.Warnings) : null;
@@ -177,6 +230,9 @@ public class BusinessesController(
 
         return RedirectToAction(nameof(Index));
     }
+
+    private static string? NormalizeInstructions(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     /// <summary>"victory-skating", then "victory-skating-2", "victory-skating-3", ... if taken.</summary>
     private async Task<string> UniqueSlugAsync(string baseSlug, CancellationToken ct)

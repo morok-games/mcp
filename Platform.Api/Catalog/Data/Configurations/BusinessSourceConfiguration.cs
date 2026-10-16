@@ -11,6 +11,7 @@ public class BusinessSourceConfiguration : IEntityTypeConfiguration<BusinessSour
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).ValueGeneratedNever();
         builder.Property(s => s.Url).HasMaxLength(2048);
+        builder.Property(s => s.ExtractionInstructions).HasMaxLength(BusinessSource.MaxInstructionsLength);
 
         builder.HasOne(s => s.Business)
             .WithMany(b => b.Sources)

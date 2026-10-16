@@ -1,0 +1,39 @@
+@model BusinessEditModel
+@{
+    ViewData["Title"] = $"Edit {Model.Name}";
+}
+
+<h1 class="h3 mb-3">Edit business</h1>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="bg-body rounded shadow-sm p-4" style="max-width: 36rem">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+    @* Read-only: only the extraction instructions are editable *@
+    <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input class="form-control" value="@Model.Name" disabled />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Link (product page)</label>
+        <input class="form-control" value="@Model.SourceUrl" disabled />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Adapter</label>
+        <input class="form-control" value="@Model.SourcePlatform" disabled />
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="ExtractionInstructions" class="form-label"></label>
+        <textarea asp-for="ExtractionInstructions" class="form-control" rows="8" autofocus
+                  placeholder="'$6/class' is a derived per-class price, not a separate pricing option."></textarea>
+        <span asp-validation-for="ExtractionInstructions" class="text-danger small"></span>
+        <div class="form-text">Hints for the AI that parses this site. They are applied on the next import.</div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+</form>

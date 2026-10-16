@@ -57,7 +57,7 @@ public partial class WebsiteCatalogAdapter : ICatalogSourceAdapter
             url, page.Blocks.Count, page.CheckoutLinks.Count, string.Join(", ", page.Amounts), string.Join(", ", page.CrossedOutAmounts));
 
         var extraction = await _llm.GenerateStructuredAsync<WebsiteExtraction>(
-            ExtractionSystemPrompt, BuildExtractionPrompt(page), ct);
+            ExtractionSystemPrompt, BuildExtractionPrompt(page, source.ExtractionInstructions), ct);
 
         return WebsiteSnapshotMapper.Map(page, extraction);
     }
@@ -172,7 +172,7 @@ public partial class WebsiteCatalogAdapter : ICatalogSourceAdapter
         - Report contradictions (e.g. "monthly subscription" vs a one-time 6-month price) in Warnings.
         """;
 
-    private static string BuildExtractionPrompt(WebPage page)
+    private static string BuildExtractionPrompt(WebPage page, string? instructions)
     {
         var sb = new StringBuilder();
         sb.AppendLine($"Today: {DateTime.UtcNow:yyyy-MM-dd}");
@@ -195,6 +195,13 @@ public partial class WebsiteCatalogAdapter : ICatalogSourceAdapter
             var text = block.Text.Length > budget ? block.Text[..budget] : block.Text;
             sb.AppendLine($"### {block.Id}").AppendLine(text).AppendLine();
             budget -= text.Length;
+        }
+
+        // Placed last so these site-specific hints are the freshest context for the model
+        if (!string.IsNullOrWhiteSpace(instructions))
+        {
+            sb.AppendLine("Additional instructions from the catalog admin for this business (follow them; they override the general rules):");
+            sb.AppendLine(instructions.Trim());
         }
 
         return sb.ToString();
