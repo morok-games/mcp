@@ -81,7 +81,16 @@ builder.Services.AddMcpServer(options =>
     .WithTools<CatalogMcpTools>(new JsonSerializerOptions(McpJsonUtilities.DefaultOptions)
     {
         Converters = { new JsonStringEnumConverter() }
-    });
+    })
+    // tools/list: the search tool description names the businesses currently in the catalog
+    .WithRequestFilters(filters => filters.AddListToolsFilter(next => async (context, ct) =>
+    {
+        var result = await next(context, ct);
+        var descriptions = context.Services!.GetRequiredService<McpToolDescriptions>();
+        return await descriptions.ApplyAsync(result, ct);
+    }));
+builder.Services.AddMemoryCache();
+builder.Services.AddScoped<McpToolDescriptions>();
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ModelCircuitBreaker>();
