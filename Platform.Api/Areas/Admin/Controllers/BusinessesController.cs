@@ -65,7 +65,16 @@ public class BusinessesController(
             .Select(s => new StaffRow(s.Name, s.Role, s.Credentials))
             .ToList();
 
-        return View(new BusinessDetails(business.Name, offerings, staff));
+        // TODO: remove with multi-page sources; until then two pages of one site are separate businesses
+        var duplicates = business.ExternalId is null
+            ? []
+            : await db.Businesses.AsNoTracking()
+                .Where(b => b.Id != business.Id && b.SourcePlatform == business.SourcePlatform && b.ExternalId == business.ExternalId)
+                .OrderBy(b => b.Name)
+                .Select(b => new DuplicateRow(b.Id, b.Name))
+                .ToListAsync(ct);
+
+        return View(new BusinessDetails(business.Name, duplicates, offerings, staff));
     }
 
     [HttpGet]
@@ -211,12 +220,13 @@ public class BusinessesController(
             TempData["Success"] = $"Import for '{business.Name}' finished: {result.Created} created, {result.Updated} updated, " +
                                   $"{result.Deactivated} deactivated.";
         }
-        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or NotSupportedException)
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or NotSupportedException or DbUpdateException)
         {
             logger.LogError(ex, "Import failed for {Business}", business.Slug);
             succeeded = false;
-            summary = ex.Message;
-            TempData["Error"] = $"Import for '{business.Name}' failed: {ex.Message}";
+            // For database errors the useful text (e.g. a violated constraint) is in the inner exception
+            summary = ex is DbUpdateException { InnerException: { } inner } ? $"Database error: {inner.Message}" : ex.Message;
+            TempData["Error"] = $"Import for '{business.Name}' failed: {summary}";
 
             // Do not persist half-applied import changes together with the status below
             db.ChangeTracker.Clear();

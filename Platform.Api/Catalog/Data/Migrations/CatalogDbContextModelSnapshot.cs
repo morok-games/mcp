@@ -190,7 +190,6 @@ namespace Platform.Api.Catalog.Data.Migrations
                         .HasDatabaseName("ix_businesses_slug");
 
                     b.HasIndex("SourcePlatform", "ExternalId")
-                        .IsUnique()
                         .HasDatabaseName("ix_businesses_source_platform_external_id")
                         .HasFilter("external_id IS NOT NULL");
 

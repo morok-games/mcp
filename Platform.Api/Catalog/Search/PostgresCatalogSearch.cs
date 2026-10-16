@@ -132,19 +132,24 @@ public class PostgresCatalogSearch(CatalogDbContext db) : ICatalogSearch
 
         foreach (var mention in mentions)
         {
-            var business = candidates.FirstOrDefault(b =>
+            // All matches, not the first one: one brand can currently be split into several businesses
+            // (one per imported page of the same site), and each of them holds part of the offerings
+            var matched = candidates.Where(b =>
                 b.Name.Equals(mention, StringComparison.OrdinalIgnoreCase) ||
                 b.Slug == Slug.From(mention) ||
-                b.Aliases.Any(a => a.Equals(mention, StringComparison.OrdinalIgnoreCase)));
+                b.Aliases.Any(a => a.Equals(mention, StringComparison.OrdinalIgnoreCase))).ToList();
 
-            if (business is null)
+            if (matched.Count == 0)
             {
                 unknown.Add(mention);
                 continue;
             }
 
-            matches.Add(new BusinessMatch(mention, business.Slug, business.Name));
-            ids.Add(business.Id);
+            foreach (var business in matched)
+            {
+                matches.Add(new BusinessMatch(mention, business.Slug, business.Name));
+                ids.Add(business.Id);
+            }
         }
 
         return (matches, ids.Distinct().ToList(), unknown);

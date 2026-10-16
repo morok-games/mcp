@@ -16,7 +16,14 @@ public record BusinessSourceRow(
     public bool HasWarnings => LastImportSucceeded == true && !string.IsNullOrWhiteSpace(LastImportSummary);
 }
 
-public record BusinessDetails(string Name, IReadOnlyList<OfferingRow> Offerings, IReadOnlyList<StaffRow> Staff);
+/// <param name="Duplicates">Other businesses imported from the same source site (temporary: one page per business).</param>
+public record BusinessDetails(
+    string Name,
+    IReadOnlyList<DuplicateRow> Duplicates,
+    IReadOnlyList<OfferingRow> Offerings,
+    IReadOnlyList<StaffRow> Staff);
+
+public record DuplicateRow(Guid Id, string Name);
 
 public record OfferingRow(
     string Name,

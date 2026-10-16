@@ -8,6 +8,19 @@
     <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to businesses</a>
 </div>
 
+@if (Model.Duplicates.Count > 0)
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <strong>Duplicate.</strong> This business was imported from the same site as:
+        @for (var i = 0; i < Model.Duplicates.Count; i++)
+        {
+            <a asp-action="Details" asp-route-id="@Model.Duplicates[i].Id">@Model.Duplicates[i].Name</a>@(i < Model.Duplicates.Count - 1 ? ", " : "")
+        }.
+        Each imported page is a separate business for now; they share the brand and its aliases.
+    </div>
+}
+
 <h2 class="h6 text-secondary text-uppercase">Offerings</h2>
 @if (Model.Offerings.Count == 0)
 {
