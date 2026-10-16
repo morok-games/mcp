@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Platform.Api.Catalog.Entities;
 using Platform.Api.Catalog.Ingestion;
+using Platform.Api.Mcp;
 
 namespace Platform.Api.Controllers;
 
@@ -9,7 +10,10 @@ namespace Platform.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/catalog/import")]
-public class CatalogImportController(CatalogIngestionService ingestion, ILogger<CatalogImportController> logger) : ControllerBase
+public class CatalogImportController(
+    CatalogIngestionService ingestion,
+    McpToolDescriptions mcpToolDescriptions,
+    ILogger<CatalogImportController> logger) : ControllerBase
 {
     public record ImportRequest(
         SourcePlatform Platform,
@@ -36,6 +40,7 @@ public class CatalogImportController(CatalogIngestionService ingestion, ILogger<
                 return new ImportResponse(await ingestion.FetchAsync(source, ct), null);
 
             var (snapshot, result) = await ingestion.IngestAsync(source, ct);
+            mcpToolDescriptions.Invalidate(); // offerings changed: refresh the MCP tool description
             return new ImportResponse(snapshot, result);
         }
         catch (NotSupportedException ex)

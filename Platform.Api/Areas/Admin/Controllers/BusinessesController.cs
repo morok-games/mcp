@@ -7,6 +7,7 @@ using Platform.Api.Catalog;
 using Platform.Api.Catalog.Data;
 using Platform.Api.Catalog.Entities;
 using Platform.Api.Catalog.Ingestion;
+using Platform.Api.Mcp;
 
 namespace Platform.Api.Areas.Admin.Controllers;
 
@@ -17,6 +18,7 @@ public class BusinessesController(
     CatalogDbContext db,
     CatalogIngestionService ingestion,
     CatalogAdapterResolver adapters,
+    McpToolDescriptions mcpToolDescriptions,
     ILogger<BusinessesController> logger) : Controller
 {
     public async Task<IActionResult> Index(CancellationToken ct)
@@ -184,6 +186,7 @@ public class BusinessesController(
 
         // Offerings, staff, prices, runs and sources are removed by ON DELETE CASCADE in the database
         await db.Businesses.Where(b => b.Id == id).ExecuteDeleteAsync(ct);
+        mcpToolDescriptions.Invalidate(); // the business must disappear from the MCP tool description
         logger.LogInformation("Business {Name} ({Id}) deleted by {Admin}", name, id, User.Identity?.Name);
 
         TempData["Success"] = $"Business '{name}' deleted.";
@@ -216,6 +219,7 @@ public class BusinessesController(
 
             succeeded = true;
             summary = snapshot.Warnings.Count > 0 ? string.Join("\n", snapshot.Warnings) : null;
+            mcpToolDescriptions.Invalidate(); // offerings changed: refresh the MCP tool description
 
             TempData["Success"] = $"Import for '{business.Name}' finished: {result.Created} created, {result.Updated} updated, " +
                                   $"{result.Deactivated} deactivated.";

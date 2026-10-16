@@ -21,6 +21,12 @@ public class McpToolDescriptions(CatalogDbContext db, IMemoryCache cache, ILogge
     private const int MaxBusinesses = 50;
     private const int MaxOfferingsPerBusiness = 5;
 
+    /// <summary>
+    /// Drops the cached description after the catalog changes (import, delete), so the next tools/list reflects it at once
+    /// instead of after the cache expires. Clients still see it only when they re-request the tool list.
+    /// </summary>
+    public void Invalidate() => cache.Remove(CacheKey);
+
     /// <summary>Returns the tools/list result with the search tool description built from the current catalog.</summary>
     public async ValueTask<ListToolsResult> ApplyAsync(ListToolsResult result, CancellationToken ct)
     {
