@@ -154,8 +154,8 @@ app.MapAreaControllerRoute(
 app.MapControllers();
 app.MapMcp("/mcp").RequireRateLimiting(RateLimits.Mcp);
 
-// The chat lives in the admin panel now; the site root leads there
-app.MapGet("/", () => Results.Redirect("/admin/Chat"));
+// The site root opens the admin panel's start page (the businesses list)
+app.MapGet("/", () => Results.Redirect("/admin"));
 
 app.Run();
 
